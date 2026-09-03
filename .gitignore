@@ -1,0 +1,12 @@
+# Credenciales reales — NUNCA subir a GitHub
+config/database.php
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Dependencias (por si en el futuro usas Composer)
+/vendor/

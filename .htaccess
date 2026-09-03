@@ -1,0 +1,16 @@
+# =========================================================
+#  Front Controller + protección básica
+# =========================================================
+
+# Desactiva el listado de carpetas en el navegador
+Options -Indexes
+
+RewriteEngine On
+
+# Bloquea el acceso HTTP directo a las carpetas internas
+RewriteRule ^(config|src)/ - [F,L]
+
+# Toda petición que NO sea un archivo o carpeta real, va a index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
