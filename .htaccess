@@ -4,6 +4,7 @@
 
 # Desactiva el listado de carpetas en el navegador
 Options -Indexes
+DirectoryIndex app.html index.php
 
 RewriteEngine On
 
