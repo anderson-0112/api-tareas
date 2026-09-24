@@ -4,13 +4,29 @@ API RESTful desarrollada en PHP puro (sin frameworks) con persistencia en MySQL,
 como proyecto de la asignatura Desarrollo Web / Backend.
 
 ## URL Base de Producción
-
 https://api.puntosportcunen.com
+
+
+La raíz del dominio sirve la interfaz web; los endpoints REST se consumen
+bajo la ruta `/tareas`.
+
+## Interfaz Web
+
+Además de los endpoints REST, el proyecto incluye una interfaz web que permite
+gestionar las tareas sin necesidad de un cliente HTTP como Postman.
+
+**URL:** https://api.puntosportcunen.com
+
+Implementada en HTML, CSS y JavaScript puro (archivo `app.html`), consume la
+propia API mediante `fetch()`. Permite listar, crear, actualizar y eliminar
+tareas desde el navegador, mostrando las respuestas y los errores de la API
+en lenguaje claro para el usuario final.
 
 ## Tecnologías utilizadas
 
-- **Lenguaje:** PHP 
-- **Base de datos:** MySQL 
+- **Lenguaje:** PHP (puro, sin framework)
+- **Base de datos:** MySQL (PDO con sentencias preparadas)
+- **Interfaz:** HTML5, CSS y JavaScript (fetch API)
 - **Hosting:** Hostinger (hosting compartido)
 - **Formato de datos:** JSON
 
