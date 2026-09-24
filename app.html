@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestión de Tareas</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f4f6f8;
+      color: #1f2933;
+      margin: 0;
+      padding: 24px 16px;
+    }
+
+    .contenedor { max-width: 1100px; margin: 0 auto; }
+
+    header {
+      background: #1f3864;
+      color: #fff;
+      padding: 20px 24px;
+      border-radius: 8px 8px 0 0;
+    }
+    header h1 { margin: 0; font-size: 22px; }
+    header p  { margin: 4px 0 0; font-size: 14px; opacity: .85; }
+
+    .panel {
+      background: #fff;
+      border-radius: 0 0 8px 8px;
+      padding: 20px 24px 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+
+    .barra {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .barra h2 { margin: 0; font-size: 17px; }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 16px;
+      background: #1f3864;
+      color: #fff;
+    }
+    button:hover { background: #2c4d8a; }
+    button.secundario { background: #6b7280; }
+    button.secundario:hover { background: #4b5563; }
+    button:disabled { background: #9aa5b1; cursor: not-allowed; }
+
+    /* Botones pequeños dentro de la tabla */
+    button.mini {
+      padding: 5px 11px;
+      font-size: 13px;
+      background: #e5e7eb;
+      color: #1f2933;
+    }
+    button.mini:hover { background: #cbd2d9; }
+    button.mini.peligro { background: #ffe0e0; color: #9b1c1c; }
+    button.mini.peligro:hover { background: #ffc9c9; }
+
+    .celda-acciones { display: flex; gap: 6px; white-space: nowrap; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e4e7eb;
+      vertical-align: middle;
+    }
+    th { background: #eef1f5; font-weight: 600; white-space: nowrap; }
+    tbody tr:hover { background: #f9fafb; }
+    tr.editando { background: #fff8e1 !important; }
+
+    /* Etiquetas de color para estado y prioridad */
+    .tag {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .estado-pendiente     { background: #fff4d6; color: #8a6100; }
+    .estado-en-progreso   { background: #dbeafe; color: #1e40af; }
+    .estado-completada    { background: #d8f3dc; color: #1b5e20; }
+    .estado-cancelada     { background: #ffe0e0; color: #9b1c1c; }
+    .prioridad-alta       { background: #ffe0e0; color: #9b1c1c; }
+    .prioridad-media      { background: #fff4d6; color: #8a6100; }
+    .prioridad-baja       { background: #e5e7eb; color: #4b5563; }
+
+    .vacio, .cargando {
+      text-align: center;
+      padding: 30px;
+      color: #6b7280;
+    }
+
+    .aviso {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+    .aviso.error { background: #ffe0e0; color: #9b1c1c; display: block; }
+    .aviso.exito { background: #d8f3dc; color: #1b5e20; display: block; }
+    .aviso ul { margin: 6px 0 0; padding-left: 20px; }
+
+    .tabla-scroll { overflow-x: auto; }
+
+    /* --- Formulario --- */
+    .form-seccion {
+      margin-bottom: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #e4e7eb;
+    }
+    /* Resalta el formulario cuando está en modo edición */
+    .form-seccion.modo-edicion {
+      background: #fff8e1;
+      border: 1px solid #ffe08a;
+      border-radius: 8px;
+      padding: 18px 20px 22px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .campo { display: flex; flex-direction: column; }
+    .campo.ancho-total { grid-column: 1 / -1; }
+
+    .campo label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #3e4c59;
+    }
+    .campo .obligatorio { color: #c62828; }
+
+    .campo input,
+    .campo select,
+    .campo textarea {
+      font: inherit;
+      padding: 9px 11px;
+      border: 1px solid #cbd2d9;
+      border-radius: 6px;
+      background: #fff;
+      color: #1f2933;
+    }
+    .campo input:focus,
+    .campo select:focus,
+    .campo textarea:focus {
+      outline: 2px solid #1f3864;
+      outline-offset: -1px;
+      border-color: #1f3864;
+    }
+    .campo textarea { resize: vertical; min-height: 62px; }
+
+    .acciones-form { display: flex; gap: 10px; }
+    #btnCancelar { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="contenedor">
+    <header>
+      <h1>Gestión de Tareas</h1>
+      <p>Sistema de administración de tareas</p>
+    </header>
+
+    <div class="panel">
+
+      <div id="aviso" class="aviso"></div>
+
+      <!-- ===== Formulario (sirve para crear y para editar) ===== -->
+      <div class="form-seccion" id="seccionForm">
+        <div class="barra">
+          <h2 id="tituloForm">Nueva tarea</h2>
+        </div>
+
+        <form id="formTarea">
+          <div class="form-grid">
+
+            <div class="campo ancho-total">
+              <label for="titulo">Título <span class="obligatorio">*</span></label>
+              <input type="text" id="titulo" name="titulo" maxlength="150"
+                     placeholder="Ej. Preparar informe mensual" required>
+            </div>
+
+            <div class="campo ancho-total">
+              <label for="descripcion">Descripción</label>
+              <textarea id="descripcion" name="descripcion"
+                        placeholder="Detalle de lo que se debe realizar"></textarea>
+            </div>
+
+            <div class="campo">
+              <label for="estado">Estado</label>
+              <select id="estado" name="estado">
+                <option value="pendiente">Pendiente</option>
+                <option value="en progreso">En progreso</option>
+                <option value="completada">Completada</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="prioridad">Prioridad</label>
+              <select id="prioridad" name="prioridad">
+                <option value="alta">Alta</option>
+                <option value="media" selected>Media</option>
+                <option value="baja">Baja</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="responsable">Responsable</label>
+              <input type="text" id="responsable" name="responsable"
+                     maxlength="100" placeholder="Nombre de la persona">
+            </div>
+
+            <div class="campo">
+              <label for="categoria">Categoría</label>
+              <input type="text" id="categoria" name="categoria"
+                     maxlength="80" placeholder="Ej. Backend">
+            </div>
+
+            <div class="campo">
+              <label for="fecha_vencimiento">Fecha de vencimiento</label>
+              <input type="date" id="fecha_vencimiento" name="fecha_vencimiento">
+            </div>
+
+            <div class="campo">
+              <label for="tiempo_estimado">Tiempo estimado (horas)</label>
+              <input type="number" id="tiempo_estimado" name="tiempo_estimado"
+                     min="0" step="0.25" placeholder="Ej. 3.5">
+            </div>
+
+          </div>
+
+          <div class="acciones-form">
+            <button type="submit" id="btnGuardar">Guardar tarea</button>
+            <button type="button" class="secundario" id="btnCancelar">Cancelar edición</button>
+            <button type="button" class="secundario" id="btnLimpiar">Limpiar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ===== Listado de tareas ===== -->
+      <div class="barra">
+        <h2>Listado de tareas</h2>
+        <button id="btnRecargar">Actualizar listado</button>
+      </div>
+
+      <div class="tabla-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Título</th>
+              <th>Estado</th>
+              <th>Prioridad</th>
+              <th>Responsable</th>
+              <th>Categoría</th>
+              <th>Vencimiento</th>
+              <th>Horas</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoTabla">
+            <tr><td colspan="9" class="cargando">Cargando tareas...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+// ============================================================
+//  CONFIGURACIÓN Y ESTADO
+// ============================================================
+// Ruta relativa: app.html vive en la misma carpeta que la API,
+// por eso basta con "tareas". Evita CORS y funciona en cualquier dominio.
+const API = 'tareas';
+
+// null = modo CREAR.  Un número = modo EDITAR esa tarea.
+let tareaEditandoId = null;
+
+// ============================================================
+//  UTILIDADES
+// ============================================================
+function limpiarAviso() {
+  const aviso = document.getElementById('aviso');
+  aviso.textContent = '';
+  aviso.className = 'aviso';
+}
+
+// Evita que un texto del usuario se interprete como HTML (protección XSS)
+function escapar(texto) {
+  if (texto === null || texto === undefined) return '';
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Convierte "en progreso" en "en-progreso" para usarlo como clase CSS
+function claseDe(prefijo, valor) {
+  return prefijo + '-' + String(valor).replace(/\s+/g, '-');
+}
+
+function mostrarExito(mensaje) {
+  const aviso = document.getElementById('aviso');
+  aviso.textContent = mensaje;
+  aviso.className = 'aviso exito';
+  setTimeout(limpiarAviso, 4000);
+}
+
+// Muestra un error, con lista de detalles si la API los envía (código 400)
+function mostrarError(mensaje, detalles) {
+  const aviso = document.getElementById('aviso');
+  let html = escapar(mensaje);
+  if (Array.isArray(detalles) && detalles.length > 0) {
+    html += '<ul>' + detalles.map(function (d) {
+      return '<li>' + escapar(d) + '</li>';
+    }).join('') + '</ul>';
+  }
+  aviso.innerHTML = html;
+  aviso.className = 'aviso error';
+}
+
+// ============================================================
+//  LISTAR TAREAS  (GET /tareas)
+// ============================================================
+async function cargarTareas() {
+  const cuerpo = document.getElementById('cuerpoTabla');
+  cuerpo.innerHTML = '<tr><td colspan="9" class="cargando">Cargando tareas...</td></tr>';
+
+  try {
+    const respuesta = await fetch(API);
+    if (!respuesta.ok) {
+      throw new Error('El servidor respondió con el código ' + respuesta.status);
+    }
+    const tareas = await respuesta.json();
+    dibujarTabla(tareas);
+  } catch (error) {
+    cuerpo.innerHTML = '<tr><td colspan="9" class="vacio">No se pudo cargar el listado.</td></tr>';
+    mostrarError('No fue posible conectar con el servidor. Verifique su conexión e intente nuevamente.');
+    console.error(error);
+  }
+}
+
+function dibujarTabla(tareas) {
+  const cuerpo = document.getElementById('cuerpoTabla');
+
+  if (!Array.isArray(tareas) || tareas.length === 0) {
+    cuerpo.innerHTML = '<tr><td colspan="9" class="vacio">No hay tareas registradas.</td></tr>';
+    return;
+  }
+
+  cuerpo.innerHTML = tareas.map(function (t) {
+    // Resaltamos la fila que se está editando
+    const resaltar = (String(t.id) === String(tareaEditandoId)) ? ' class="editando"' : '';
+    return `
+      <tr${resaltar}>
+        <td>${escapar(t.id)}</td>
+        <td><strong>${escapar(t.titulo)}</strong></td>
+        <td><span class="tag ${claseDe('estado', t.estado)}">${escapar(t.estado)}</span></td>
+        <td><span class="tag ${claseDe('prioridad', t.prioridad)}">${escapar(t.prioridad)}</span></td>
+        <td>${escapar(t.responsable) || '—'}</td>
+        <td>${escapar(t.categoria) || '—'}</td>
+        <td>${escapar(t.fecha_vencimiento) || '—'}</td>
+        <td>${escapar(t.tiempo_estimado) || '—'}</td>
+        <td>
+          <div class="celda-acciones">
+            <button type="button" class="mini" data-accion="editar"
+                    data-id="${escapar(t.id)}">Editar</button>
+            <button type="button" class="mini peligro" data-accion="eliminar"
+                    data-id="${escapar(t.id)}" data-titulo="${escapar(t.titulo)}">Eliminar</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ============================================================
+//  PREPARAR EL FORMULARIO PARA EDITAR  (GET /tareas/{id})
+// ============================================================
+async function iniciarEdicion(id) {
+  limpiarAviso();
+
+  try {
+    // Pedimos los datos actuales a la API (no usamos los de la tabla,
+    // que podrían estar desactualizados si alguien más los modificó)
+    const respuesta = await fetch(API + '/' + id);
+
+    if (respuesta.status === 404) {
+      mostrarError('La tarea que intenta editar ya no existe. Actualice el listado.');
+      cargarTareas();
+      return;
+    }
+    if (!respuesta.ok) {
+      throw new Error('Código ' + respuesta.status);
+    }
+
+    const t = await respuesta.json();
+
+    // Llenamos el formulario con los valores actuales
+    document.getElementById('titulo').value            = t.titulo || '';
+    document.getElementById('descripcion').value       = t.descripcion || '';
+    document.getElementById('estado').value            = t.estado || 'pendiente';
+    document.getElementById('prioridad').value         = t.prioridad || 'media';
+    document.getElementById('responsable').value       = t.responsable || '';
+    document.getElementById('categoria').value         = t.categoria || '';
+    document.getElementById('fecha_vencimiento').value = t.fecha_vencimiento || '';
+    document.getElementById('tiempo_estimado').value   = t.tiempo_estimado || '';
+
+    // Cambiamos a modo EDICIÓN
+    tareaEditandoId = t.id;
+    activarModoEdicion(t.titulo);
+    cargarTareas();   // vuelve a dibujar la tabla para resaltar la fila
+
+    // Llevamos la vista al formulario
+    document.getElementById('seccionForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  } catch (error) {
+    mostrarError('No fue posible cargar la tarea. Intente nuevamente.');
+    console.error(error);
+  }
+}
+
+// Cambia la apariencia del formulario a "modo edición"
+function activarModoEdicion(titulo) {
+  document.getElementById('tituloForm').textContent = 'Editando: ' + titulo;
+  document.getElementById('btnGuardar').textContent = 'Guardar cambios';
+  document.getElementById('btnCancelar').style.display = 'inline-block';
+  document.getElementById('seccionForm').classList.add('modo-edicion');
+}
+
+// Vuelve al modo "crear nueva tarea"
+function volverAModoCrear() {
+  tareaEditandoId = null;
+  document.getElementById('formTarea').reset();
+  document.getElementById('tituloForm').textContent = 'Nueva tarea';
+  document.getElementById('btnGuardar').textContent = 'Guardar tarea';
+  document.getElementById('btnCancelar').style.display = 'none';
+  document.getElementById('seccionForm').classList.remove('modo-edicion');
+  cargarTareas();   // quita el resaltado de la fila
+}
+
+// ============================================================
+//  GUARDAR  (POST /tareas  ó  PUT /tareas/{id})
+// ============================================================
+async function guardarTarea(evento) {
+  evento.preventDefault();
+
+  const boton = document.getElementById('btnGuardar');
+  const esEdicion = (tareaEditandoId !== null);
+  boton.disabled = true;
+  boton.textContent = 'Guardando...';
+  limpiarAviso();
+
+  try {
+    // 1) Leemos los valores del formulario
+    const datos = {
+      titulo:            document.getElementById('titulo').value.trim(),
+      descripcion:       document.getElementById('descripcion').value.trim(),
+      estado:            document.getElementById('estado').value,
+      prioridad:         document.getElementById('prioridad').value,
+      responsable:       document.getElementById('responsable').value.trim(),
+      categoria:         document.getElementById('categoria').value.trim(),
+      fecha_vencimiento: document.getElementById('fecha_vencimiento').value,
+      tiempo_estimado:   document.getElementById('tiempo_estimado').value
+    };
+
+    if (esEdicion) {
+      // Al EDITAR sí enviamos los campos vacíos: significan "borrar este dato".
+      // La API convierte la cadena vacía en NULL.
+      if (datos.tiempo_estimado !== '') {
+        datos.tiempo_estimado = Number(datos.tiempo_estimado);
+      }
+    } else {
+      // Al CREAR omitimos los vacíos para que la API aplique sus valores por defecto
+      Object.keys(datos).forEach(function (clave) {
+        if (datos[clave] === '' || datos[clave] === null) {
+          delete datos[clave];
+        }
+      });
+      if (datos.tiempo_estimado !== undefined) {
+        datos.tiempo_estimado = Number(datos.tiempo_estimado);
+      }
+    }
+
+    // 2) Método y URL según el modo
+    const url    = esEdicion ? (API + '/' + tareaEditandoId) : API;
+    const metodo = esEdicion ? 'PUT' : 'POST';
+
+    const respuesta = await fetch(url, {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos)
+    });
+
+    const resultado = await respuesta.json();
+
+    // 3) Interpretamos el código de estado
+    if (respuesta.status === 201) {
+      mostrarExito('La tarea "' + resultado.titulo + '" se registró correctamente.');
+      document.getElementById('formTarea').reset();
+      cargarTareas();
+
+    } else if (respuesta.status === 200 && esEdicion) {
+      mostrarExito('La tarea "' + resultado.titulo + '" se actualizó correctamente.');
+      volverAModoCrear();
+
+    } else if (respuesta.status === 400) {
+      mostrarError('No se pudo guardar. Revise los siguientes datos:', resultado.detalles);
+
+    } else if (respuesta.status === 404) {
+      mostrarError('La tarea que intenta actualizar ya no existe.');
+      volverAModoCrear();
+
+    } else {
+      mostrarError('Ocurrió un problema al guardar. Intente nuevamente.');
+    }
+
+  } catch (error) {
+    mostrarError('No fue posible conectar con el servidor. Verifique su conexión.');
+    console.error(error);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = (tareaEditandoId !== null) ? 'Guardar cambios' : 'Guardar tarea';
+  }
+}
+
+// ============================================================
+//  ELIMINAR UNA TAREA  (DELETE /tareas/{id})
+// ============================================================
+async function eliminarTarea(id, titulo) {
+  // Confirmación: la eliminación es irreversible
+  const confirmado = confirm(
+    '¿Eliminar la tarea "' + titulo + '"?\n\n' +
+    'Esta acción no se puede deshacer.'
+  );
+  if (!confirmado) return;
+
+  limpiarAviso();
+
+  try {
+    const respuesta = await fetch(API + '/' + id, { method: 'DELETE' });
+    const resultado = await respuesta.json();
+
+    if (respuesta.status === 200) {
+      mostrarExito('La tarea "' + titulo + '" se eliminó correctamente.');
+
+      // Si estábamos editando justamente esa tarea, salimos del modo edición
+      if (String(tareaEditandoId) === String(id)) {
+        volverAModoCrear();
+      } else {
+        cargarTareas();
+      }
+
+    } else if (respuesta.status === 404) {
+      mostrarError('La tarea ya no existe. Se actualizará el listado.');
+      cargarTareas();
+
+    } else {
+      mostrarError('No se pudo eliminar la tarea. Intente nuevamente.');
+    }
+
+  } catch (error) {
+    mostrarError('No fue posible conectar con el servidor. Verifique su conexión.');
+    console.error(error);
+  }
+}
+
+// ============================================================
+//  ARRANQUE
+// ============================================================
+document.getElementById('btnRecargar').addEventListener('click', cargarTareas);
+document.getElementById('formTarea').addEventListener('submit', guardarTarea);
+document.getElementById('btnCancelar').addEventListener('click', volverAModoCrear);
+
+document.getElementById('btnLimpiar').addEventListener('click', function () {
+  if (tareaEditandoId !== null) {
+    volverAModoCrear();
+  } else {
+    document.getElementById('formTarea').reset();
+  }
+  limpiarAviso();
+});
+
+// Delegación de eventos: un solo escuchador para todos los botones de la tabla
+document.getElementById('cuerpoTabla').addEventListener('click', function (evento) {
+  const boton = evento.target.closest('button[data-accion]');
+  if (!boton) return;
+
+  const accion = boton.getAttribute('data-accion');
+  const id     = boton.getAttribute('data-id');
+
+  if (accion === 'editar') {
+    iniciarEdicion(id);
+  } else if (accion === 'eliminar') {
+    eliminarTarea(id, boton.getAttribute('data-titulo'));
+  }
+});
+
+// Cargamos el listado apenas se abre la página
+cargarTareas();
+</script>
+
+</body>
+</html>
